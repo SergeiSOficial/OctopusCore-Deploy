@@ -113,15 +113,23 @@ download octopuscore-controller-ubuntu.tar.gz
 verify_asset "$asset"
 verify_asset octopuscore-controller-ubuntu.tar.gz
 
-install -d -m 0755 "$INSTALL_DIR"
-tar -xzf "$WORK/octopuscore-controller-ubuntu.tar.gz" -C "$INSTALL_DIR" --strip-components=1
-install -m 0755 "$WORK/$asset" "$INSTALL_DIR/ocpd"
-
-args=(--yes --binary "$INSTALL_DIR/ocpd" --bind "$BIND_ADDR")
+extract_dir="$INSTALL_DIR"
+binary_path="$INSTALL_DIR/ocpd"
 if [ "$DRY_RUN" = true ]; then
-  args=(--dry-run --binary "$INSTALL_DIR/ocpd" --bind "$BIND_ADDR")
+  extract_dir="$WORK/controller"
+  binary_path="$WORK/$asset"
+else
+  install -d -m 0755 "$INSTALL_DIR"
+  install -m 0755 "$WORK/$asset" "$binary_path"
+fi
+mkdir -p "$extract_dir"
+tar -xzf "$WORK/octopuscore-controller-ubuntu.tar.gz" -C "$extract_dir" --strip-components=1
+
+args=(--yes --binary "$binary_path" --bind "$BIND_ADDR")
+if [ "$DRY_RUN" = true ]; then
+  args=(--dry-run --binary "$binary_path" --bind "$BIND_ADDR")
 elif [ "$ENABLE_NOW" = true ]; then
   args+=(--enable-now)
 fi
 
-"$INSTALL_DIR/scripts/install/install-main-controller-ubuntu.sh" "${args[@]}"
+"$extract_dir/scripts/install/install-main-controller-ubuntu.sh" "${args[@]}"
