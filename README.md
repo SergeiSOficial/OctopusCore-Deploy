@@ -19,6 +19,16 @@ curl -fsSL https://raw.githubusercontent.com/SergeiSOficial/OctopusCore-Deploy/m
   | sudo bash -s -- --version latest --bind 127.0.0.1:8088 --enable-now
 ```
 
+## HTTPS Fronting
+
+Keep the controller bound to localhost and expose only public HTTPS API paths
+through Caddy:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/SergeiSOficial/OctopusCore-Deploy/main/install-fronting.sh \
+  | sudo bash -s -- --host octopuscore.duckdns.org --upstream 127.0.0.1:8088
+```
+
 ## Node Metrics Agent
 
 ```sh

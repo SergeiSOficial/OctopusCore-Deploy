@@ -5,6 +5,11 @@ REPO="${OCTOPUSCORE_DEPLOY_REPO:-SergeiSOficial/OctopusCore-Deploy}"
 VERSION="${OCTOPUSCORE_VERSION:-latest}"
 INSTALL_DIR="${OCTOPUSCORE_INSTALLER_DIR:-/opt/octopuscore-deploy/controller}"
 BIND_ADDR="${OCTOPUSCORE_BIND:-127.0.0.1:8088}"
+CONTROL_GATEWAY="${OCTOPUSCORE_CONTROL_GATEWAY:-https://octopuscore.duckdns.org/v1}"
+PUBLIC_BASE_URL="${OCTOPUSCORE_PUBLIC_BASE_URL:-https://octopuscore.duckdns.org}"
+PUBLIC_UDP_GATEWAY="${OCTOPUSCORE_PUBLIC_UDP_GATEWAY:-udp://octopuscore.duckdns.org:443}"
+SERVER_PUBLIC_KEY="${OCTOPUSCORE_SERVER_PUBLIC_KEY:-SUH0D3XJfvzk0nl7rtnUrE6mnf3lJdWaOA197yVGOUI=}"
+TLS_PIN="${OCTOPUSCORE_TLS_PIN:-4mUNDH1+7O9Gt6mT5MK7rL4vYSCTS96TCEFwbVH6Odw=}"
 ENABLE_NOW=true
 DRY_RUN=false
 
@@ -25,6 +30,11 @@ Options:
   --version TAG       GitHub release tag, or latest
   --install-dir PATH  Temporary installer workspace
   --bind ADDR:PORT    Controller bind address
+  --control-gateway URL
+  --public-base-url URL
+  --public-udp-gateway URL
+  --server-public-key BASE64
+  --tls-pin BASE64
   --enable-now        Start service after install (default)
   --no-start          Install but do not start service
   --dry-run           Print planned host changes
@@ -37,6 +47,11 @@ while [ "$#" -gt 0 ]; do
     --version) VERSION="$2"; shift ;;
     --install-dir) INSTALL_DIR="$2"; shift ;;
     --bind) BIND_ADDR="$2"; shift ;;
+    --control-gateway) CONTROL_GATEWAY="$2"; shift ;;
+    --public-base-url) PUBLIC_BASE_URL="$2"; shift ;;
+    --public-udp-gateway) PUBLIC_UDP_GATEWAY="$2"; shift ;;
+    --server-public-key) SERVER_PUBLIC_KEY="$2"; shift ;;
+    --tls-pin) TLS_PIN="$2"; shift ;;
     --enable-now) ENABLE_NOW=true ;;
     --no-start) ENABLE_NOW=false ;;
     --dry-run) DRY_RUN=true ;;
@@ -125,9 +140,27 @@ fi
 mkdir -p "$extract_dir"
 tar -xzf "$WORK/octopuscore-controller-ubuntu.tar.gz" -C "$extract_dir" --strip-components=1
 
-args=(--yes --binary "$binary_path" --bind "$BIND_ADDR")
+args=(
+  --yes
+  --binary "$binary_path"
+  --bind "$BIND_ADDR"
+  --control-gateway "$CONTROL_GATEWAY"
+  --public-base-url "$PUBLIC_BASE_URL"
+  --public-udp-gateway "$PUBLIC_UDP_GATEWAY"
+  --server-public-key "$SERVER_PUBLIC_KEY"
+  --tls-pin "$TLS_PIN"
+)
 if [ "$DRY_RUN" = true ]; then
-  args=(--dry-run --binary "$binary_path" --bind "$BIND_ADDR")
+  args=(
+    --dry-run
+    --binary "$binary_path"
+    --bind "$BIND_ADDR"
+    --control-gateway "$CONTROL_GATEWAY"
+    --public-base-url "$PUBLIC_BASE_URL"
+    --public-udp-gateway "$PUBLIC_UDP_GATEWAY"
+    --server-public-key "$SERVER_PUBLIC_KEY"
+    --tls-pin "$TLS_PIN"
+  )
 elif [ "$ENABLE_NOW" = true ]; then
   args+=(--enable-now)
 fi
