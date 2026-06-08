@@ -80,7 +80,16 @@ write_caddyfile() {
   tmp="$(mktemp)"
   {
     if [ -n "$ACME_EMAIL" ]; then
-      printf '{\n\temail %s\n}\n\n' "$ACME_EMAIL"
+      printf '{\n\temail %s\n\tservers {\n\t\tprotocols h1 h2\n\t}\n}\n\n' "$ACME_EMAIL"
+    else
+      cat <<'EOF'
+{
+	servers {
+		protocols h1 h2
+	}
+}
+
+EOF
     fi
     cat <<EOF
 $HOST {
