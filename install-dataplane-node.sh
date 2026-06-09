@@ -146,7 +146,7 @@ env_value() {
 ensure_key() {
   install -d -m 0750 "$(dirname "$KEY_FILE")"
   if [ ! -s "$KEY_FILE" ]; then
-    wg genkey > "$KEY_FILE"
+    (umask 077 && wg genkey > "$KEY_FILE")
     chmod 0600 "$KEY_FILE"
   fi
 }
