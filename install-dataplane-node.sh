@@ -80,6 +80,22 @@ require_cmd() {
   command -v "$1" >/dev/null 2>&1 || fail "missing required command: $1"
 }
 
+detect_egress_if() {
+  if [ "$EGRESS_INTERFACE" != "auto" ]; then
+    printf '%s\n' "$EGRESS_INTERFACE"
+    return 0
+  fi
+  ip route get 1.1.1.1 2>/dev/null | awk '
+    {
+      for (i = 1; i <= NF; i++) {
+        if ($i == "dev" && (i + 1) <= NF) {
+          print $(i + 1)
+          exit
+        }
+      }
+    }'
+}
+
 checksum() {
   sha256sum "$1" | awk '{print $1}'
 }
@@ -190,8 +206,18 @@ PY
 }
 
 ensure_firewall_rules() {
+  local egress_if
+  egress_if="$(detect_egress_if)"
+  [ -n "$egress_if" ] || fail "could not detect egress interface"
+  sysctl -w net.ipv4.ip_forward=1 >/dev/null
   iptables -C INPUT -p udp --dport "$LISTEN_PORT" -j ACCEPT 2>/dev/null \
     || iptables -I INPUT -p udp --dport "$LISTEN_PORT" -j ACCEPT
+  iptables -C FORWARD -i "$NODE_INTERFACE" -o "$egress_if" -s "$CLIENT_POOL" -j ACCEPT 2>/dev/null \
+    || iptables -I FORWARD 1 -i "$NODE_INTERFACE" -o "$egress_if" -s "$CLIENT_POOL" -j ACCEPT
+  iptables -C FORWARD -i "$egress_if" -o "$NODE_INTERFACE" -d "$CLIENT_POOL" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT 2>/dev/null \
+    || iptables -I FORWARD 1 -i "$egress_if" -o "$NODE_INTERFACE" -d "$CLIENT_POOL" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+  iptables -t nat -C POSTROUTING -s "$CLIENT_POOL" -o "$egress_if" -j MASQUERADE 2>/dev/null \
+    || iptables -t nat -A POSTROUTING -s "$CLIENT_POOL" -o "$egress_if" -j MASQUERADE
 }
 
 write_transport_profile() {
