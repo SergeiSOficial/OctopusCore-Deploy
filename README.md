@@ -52,6 +52,18 @@ OCTOPUSCORE_NODE_REGION=eu-west \
 curl -fsSL https://raw.githubusercontent.com/SergeiSOficial/OctopusCore-Deploy/main/install-node.sh | sudo -E bash
 ```
 
+## Dataplane Node
+
+For a coordinator host that should also serve as the first public DCP-v3
+gateway:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/SergeiSOficial/OctopusCore-Deploy/main/install-dataplane-node.sh \
+  | sudo bash -s -- --version latest --gateway octopus.dedyn.io:443 --enable-now
+```
+
+OCI ingress must allow UDP/443 to the instance.
+
 ## Monitoring Server
 
 Install files first:
@@ -76,7 +88,9 @@ Each release contains:
 
 - `ocpd-linux-amd64`
 - `ocpd-linux-arm64`
+- `gotatun-linux-amd64`
 - `octopuscore-controller-ubuntu.tar.gz`
+- `octopuscore-dataplane-node-ubuntu.tar.gz`
 - `octopuscore-node-agent-ubuntu.tar.gz`
 - `octopuscore-monitoring-ubuntu.tar.gz`
 - `SHA256SUMS`
