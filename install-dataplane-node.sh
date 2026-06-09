@@ -189,6 +189,11 @@ PY
   esac
 }
 
+ensure_firewall_rules() {
+  iptables -C INPUT -p udp --dport "$LISTEN_PORT" -j ACCEPT 2>/dev/null \
+    || iptables -I INPUT -p udp --dport "$LISTEN_PORT" -j ACCEPT
+}
+
 write_transport_profile() {
   install -d -m 0750 "$(dirname "$TRANSPORT_PROFILE_FILE")"
   install -m 0644 "$INSTALL_DIR/transport-dcp-v3.toml" "$TRANSPORT_PROFILE_FILE"
@@ -261,6 +266,7 @@ require_cmd wg
 require_cmd ip
 require_cmd iptables
 require_cmd python3
+require_cmd sha256sum
 
 install -d -m 0755 "$INSTALL_DIR"
 tar -xzf "$WORK/octopuscore-dataplane-node-ubuntu.tar.gz" -C "$INSTALL_DIR" --strip-components=1
@@ -277,6 +283,7 @@ fi
 
 write_transport_profile
 write_env
+ensure_firewall_rules
 
 if [ "$TOKEN_UPSERT" = true ]; then
   create_join_token
