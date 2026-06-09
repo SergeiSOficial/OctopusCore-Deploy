@@ -22,11 +22,24 @@ curl -fsSL https://raw.githubusercontent.com/SergeiSOficial/OctopusCore-Deploy/m
 ## HTTPS Fronting
 
 Keep the controller bound to localhost and expose only public HTTPS API paths
-through Caddy:
+through Caddy. For `*.dedyn.io` names, store the deSEC dynDNS token in a
+root-only file first:
+
+```sh
+printf '%s\n' '<DESEC_DYNDNS_TOKEN>' \
+  | sudo install -m 0600 -o root -g root /dev/stdin /etc/octopuscore/desec-token
+```
+
+Then install or update the front:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/SergeiSOficial/OctopusCore-Deploy/main/install-fronting.sh \
-  | sudo bash -s -- --host octopuscore.duckdns.org --upstream 127.0.0.1:8088
+  | sudo bash -s -- \
+      --host octopus.dedyn.io \
+      --upstream 127.0.0.1:8088 \
+      --desec-domain octopus.dedyn.io \
+      --desec-token-file /etc/octopuscore/desec-token \
+      --desec-ip 139.185.59.24
 ```
 
 ## Node Metrics Agent
