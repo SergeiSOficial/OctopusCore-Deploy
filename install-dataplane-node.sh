@@ -99,6 +99,31 @@ detect_egress_if() {
     }'
 }
 
+delete_dns_dnat_rules() {
+  local gateway_dns="$GATEWAY_DNS_RESOLVER:53"
+  while iptables -t nat -D PREROUTING -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p udp --dport 53 -j DNAT --to-destination "$gateway_dns" 2>/dev/null; do
+    :
+  done
+  while iptables -t nat -D PREROUTING -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p tcp --dport 53 -j DNAT --to-destination "$gateway_dns" 2>/dev/null; do
+    :
+  done
+}
+
+write_gateway_dns_resolved_dropin() {
+  local listen_ip resolved_dir resolved_conf
+  listen_ip="${TUN_ADDRESS%%/*}"
+  resolved_dir="/etc/systemd/resolved.conf.d"
+  resolved_conf="$resolved_dir/octopuscore-gateway.conf"
+
+  install -d -m 0755 "$resolved_dir"
+  cat > "$resolved_conf" <<EOF
+[Resolve]
+DNS=$GATEWAY_DNS_RESOLVER
+DNSStubListener=yes
+DNSStubListenerExtra=$listen_ip
+EOF
+}
+
 checksum() {
   sha256sum "$1" | awk '{print $1}'
 }
@@ -221,10 +246,11 @@ ensure_firewall_rules() {
     || iptables -I FORWARD 1 -i "$egress_if" -o "$NODE_INTERFACE" -d "$CLIENT_POOL" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
   iptables -t nat -C POSTROUTING -s "$CLIENT_POOL" -o "$egress_if" -j MASQUERADE 2>/dev/null \
     || iptables -t nat -A POSTROUTING -s "$CLIENT_POOL" -o "$egress_if" -j MASQUERADE
-  iptables -t nat -C PREROUTING -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p udp --dport 53 -j DNAT --to-destination "$GATEWAY_DNS_RESOLVER:53" 2>/dev/null \
-    || iptables -t nat -I PREROUTING 1 -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p udp --dport 53 -j DNAT --to-destination "$GATEWAY_DNS_RESOLVER:53"
-  iptables -t nat -C PREROUTING -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p tcp --dport 53 -j DNAT --to-destination "$GATEWAY_DNS_RESOLVER:53" 2>/dev/null \
-    || iptables -t nat -I PREROUTING 1 -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p tcp --dport 53 -j DNAT --to-destination "$GATEWAY_DNS_RESOLVER:53"
+  delete_dns_dnat_rules
+  iptables -C INPUT -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p udp --dport 53 -j ACCEPT 2>/dev/null \
+    || iptables -I INPUT 1 -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p udp --dport 53 -j ACCEPT
+  iptables -C INPUT -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p tcp --dport 53 -j ACCEPT 2>/dev/null \
+    || iptables -I INPUT 1 -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p tcp --dport 53 -j ACCEPT
 }
 
 write_transport_profile() {
@@ -317,6 +343,7 @@ fi
 
 write_transport_profile
 write_env
+write_gateway_dns_resolved_dropin
 ensure_firewall_rules
 
 if [ "$TOKEN_UPSERT" = true ]; then
