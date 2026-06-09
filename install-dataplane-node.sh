@@ -17,6 +17,7 @@ CLIENT_POOL="${OCTOPUSCORE_CLIENT_POOL:-10.111.0.0/24}"
 LISTEN_PORT="${OCTOPUSCORE_NODE_LISTEN_PORT:-443}"
 MTU="${OCTOPUSCORE_NODE_MTU:-1280}"
 EGRESS_INTERFACE="${OCTOPUSCORE_EGRESS_INTERFACE:-auto}"
+GATEWAY_DNS_RESOLVER="${OCTOPUSCORE_GATEWAY_DNS_RESOLVER:-169.254.169.254}"
 KEY_FILE="${OCTOPUSCORE_NODE_KEY_FILE:-/etc/octopuscore/dataplane-node.key}"
 TRANSPORT_PROFILE_FILE="${OCTOPUSCORE_TRANSPORT_PROFILE_FILE:-/etc/octopuscore/dataplane-transport.toml}"
 JOIN_TOKEN="${OCTOPUSCORE_NODE_JOIN_TOKEN:-}"
@@ -46,6 +47,7 @@ Options:
   --node-id ID             Node id, default oci-exit-1
   --listen-port PORT       UDP listen port, default 443
   --egress-if IFACE        Public egress interface, default auto
+  --dns-resolver ADDRESS   Gateway DNS resolver for client DNS, default 169.254.169.254
   --join-token TOKEN       Existing join token id
   --no-token-upsert        Do not create/update token through local coordinator API
   --enable-now             Start systemd service after install (default)
@@ -65,6 +67,7 @@ while [ "$#" -gt 0 ]; do
     --node-id) NODE_ID="$2"; shift ;;
     --listen-port) LISTEN_PORT="$2"; shift ;;
     --egress-if) EGRESS_INTERFACE="$2"; shift ;;
+    --dns-resolver) GATEWAY_DNS_RESOLVER="$2"; shift ;;
     --join-token) JOIN_TOKEN="$2"; shift ;;
     --no-token-upsert) TOKEN_UPSERT=false ;;
     --enable-now) ENABLE_NOW=true ;;
@@ -218,6 +221,10 @@ ensure_firewall_rules() {
     || iptables -I FORWARD 1 -i "$egress_if" -o "$NODE_INTERFACE" -d "$CLIENT_POOL" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
   iptables -t nat -C POSTROUTING -s "$CLIENT_POOL" -o "$egress_if" -j MASQUERADE 2>/dev/null \
     || iptables -t nat -A POSTROUTING -s "$CLIENT_POOL" -o "$egress_if" -j MASQUERADE
+  iptables -t nat -C PREROUTING -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p udp --dport 53 -j DNAT --to-destination "$GATEWAY_DNS_RESOLVER:53" 2>/dev/null \
+    || iptables -t nat -I PREROUTING 1 -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p udp --dport 53 -j DNAT --to-destination "$GATEWAY_DNS_RESOLVER:53"
+  iptables -t nat -C PREROUTING -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p tcp --dport 53 -j DNAT --to-destination "$GATEWAY_DNS_RESOLVER:53" 2>/dev/null \
+    || iptables -t nat -I PREROUTING 1 -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p tcp --dport 53 -j DNAT --to-destination "$GATEWAY_DNS_RESOLVER:53"
 }
 
 write_transport_profile() {
@@ -244,6 +251,7 @@ OCTOPUSCORE_CLIENT_POOL=$CLIENT_POOL
 OCTOPUSCORE_NODE_LISTEN_PORT=$LISTEN_PORT
 OCTOPUSCORE_NODE_MTU=$MTU
 OCTOPUSCORE_EGRESS_INTERFACE=$EGRESS_INTERFACE
+OCTOPUSCORE_GATEWAY_DNS_RESOLVER=$GATEWAY_DNS_RESOLVER
 OCTOPUSCORE_NODE_KEY_FILE=$KEY_FILE
 OCTOPUSCORE_TRANSPORT_PROFILE_FILE=$TRANSPORT_PROFILE_FILE
 OCTOPUSCORE_GOTATUN_BIN=/usr/local/bin/gotatun
