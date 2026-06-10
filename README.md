@@ -19,6 +19,18 @@ curl -fsSL https://raw.githubusercontent.com/SergeiSOficial/OctopusCore-Deploy/m
   | sudo bash -s -- --version latest --bind 127.0.0.1:8088 --enable-now
 ```
 
+Stage 2 DCP HTTPS is advertised alongside the DCP UDP Gateway by default. The
+controller bridges `/v1/link/dcp-https` sessions to the local dataplane listener:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/SergeiSOficial/OctopusCore-Deploy/main/install-controller.sh \
+  | sudo bash -s -- \
+      --version latest \
+      --public-dcp-https-gateways https://octopus.dedyn.io/v1/link/dcp-https \
+      --dcp-https-upstream 127.0.0.1:443 \
+      --enable-now
+```
+
 ## HTTPS Fronting
 
 Keep the controller bound to localhost and expose only public HTTPS API paths
@@ -63,6 +75,11 @@ curl -fsSL https://raw.githubusercontent.com/SergeiSOficial/OctopusCore-Deploy/m
 ```
 
 OCI ingress must allow UDP/443 to the instance.
+
+The same host can expose Stage 2 DCP HTTPS through the controller/fronting path
+without opening another public port. Keep the local dataplane listener on
+`127.0.0.1:443` and advertise `https://<host>/v1/link/dcp-https` with the
+controller installer options above.
 
 ## Monitoring Server
 

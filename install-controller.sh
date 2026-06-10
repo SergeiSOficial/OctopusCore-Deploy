@@ -8,6 +8,8 @@ BIND_ADDR="${OCTOPUSCORE_BIND:-127.0.0.1:8088}"
 CONTROL_GATEWAY="${OCTOPUSCORE_CONTROL_GATEWAY:-https://octopus.dedyn.io/v1}"
 PUBLIC_BASE_URL="${OCTOPUSCORE_PUBLIC_BASE_URL:-https://octopus.dedyn.io}"
 PUBLIC_UDP_GATEWAY="${OCTOPUSCORE_PUBLIC_UDP_GATEWAY:-udp://octopus.dedyn.io:443}"
+PUBLIC_DCP_HTTPS_GATEWAYS="${OCTOPUSCORE_PUBLIC_DCP_HTTPS_GATEWAYS:-https://octopus.dedyn.io/v1/link/dcp-https}"
+DCP_HTTPS_UPSTREAM="${OCTOPUSCORE_DCP_HTTPS_UPSTREAM:-127.0.0.1:443}"
 SERVER_PUBLIC_KEY="${OCTOPUSCORE_SERVER_PUBLIC_KEY:-SUH0D3XJfvzk0nl7rtnUrE6mnf3lJdWaOA197yVGOUI=}"
 TLS_PIN="${OCTOPUSCORE_TLS_PIN:-BVX+RGCG1xMcqwiYuLmB+/Fw/80T+RDuqkXC0S/G6yo=}"
 ENABLE_NOW=true
@@ -33,6 +35,8 @@ Options:
   --control-gateway URL
   --public-base-url URL
   --public-udp-gateway URL
+  --public-dcp-https-gateways CSV
+  --dcp-https-upstream HOST:PORT
   --server-public-key BASE64
   --tls-pin BASE64
   --enable-now        Start service after install (default)
@@ -50,6 +54,8 @@ while [ "$#" -gt 0 ]; do
     --control-gateway) CONTROL_GATEWAY="$2"; shift ;;
     --public-base-url) PUBLIC_BASE_URL="$2"; shift ;;
     --public-udp-gateway) PUBLIC_UDP_GATEWAY="$2"; shift ;;
+    --public-dcp-https-gateways) PUBLIC_DCP_HTTPS_GATEWAYS="$2"; shift ;;
+    --dcp-https-upstream) DCP_HTTPS_UPSTREAM="$2"; shift ;;
     --server-public-key) SERVER_PUBLIC_KEY="$2"; shift ;;
     --tls-pin) TLS_PIN="$2"; shift ;;
     --enable-now) ENABLE_NOW=true ;;
@@ -147,6 +153,8 @@ args=(
   --control-gateway "$CONTROL_GATEWAY"
   --public-base-url "$PUBLIC_BASE_URL"
   --public-udp-gateway "$PUBLIC_UDP_GATEWAY"
+  --public-dcp-https-gateways "$PUBLIC_DCP_HTTPS_GATEWAYS"
+  --dcp-https-upstream "$DCP_HTTPS_UPSTREAM"
   --server-public-key "$SERVER_PUBLIC_KEY"
   --tls-pin "$TLS_PIN"
 )
@@ -158,6 +166,8 @@ if [ "$DRY_RUN" = true ]; then
     --control-gateway "$CONTROL_GATEWAY"
     --public-base-url "$PUBLIC_BASE_URL"
     --public-udp-gateway "$PUBLIC_UDP_GATEWAY"
+    --public-dcp-https-gateways "$PUBLIC_DCP_HTTPS_GATEWAYS"
+    --dcp-https-upstream "$DCP_HTTPS_UPSTREAM"
     --server-public-key "$SERVER_PUBLIC_KEY"
     --tls-pin "$TLS_PIN"
   )
