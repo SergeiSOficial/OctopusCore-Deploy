@@ -26,6 +26,7 @@ controller bridges `/v1/link/dcp-https` sessions to the local dataplane listener
 curl -fsSL https://raw.githubusercontent.com/SergeiSOficial/OctopusCore-Deploy/main/install-controller.sh \
   | sudo bash -s -- \
       --version latest \
+      --public-dcp-gateways udp://octopus.dedyn.io:443 \
       --public-dcp-https-gateways https://octopus.dedyn.io/v1/link/dcp-https \
       --dcp-https-upstream 127.0.0.1:443 \
       --enable-now
