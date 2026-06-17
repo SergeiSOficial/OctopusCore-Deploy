@@ -10,7 +10,11 @@ PUBLIC_BASE_URL="${OCTOPUSCORE_PUBLIC_BASE_URL:-https://octopus.dedyn.io}"
 PUBLIC_UDP_GATEWAY="${OCTOPUSCORE_PUBLIC_UDP_GATEWAY:-udp://octopus.dedyn.io:443}"
 PUBLIC_DCP_GATEWAYS="${OCTOPUSCORE_PUBLIC_DCP_GATEWAYS:-}"
 PUBLIC_DCP_HTTPS_GATEWAYS="${OCTOPUSCORE_PUBLIC_DCP_HTTPS_GATEWAYS:-https://octopus.dedyn.io/v1/link/dcp-https}"
+PUBLIC_MASQUE_GATEWAYS="${OCTOPUSCORE_PUBLIC_MASQUE_GATEWAYS:-}"
 DCP_HTTPS_UPSTREAM="${OCTOPUSCORE_DCP_HTTPS_UPSTREAM:-127.0.0.1:443}"
+MASQUE_UDP_BIND="${OCTOPUSCORE_MASQUE_UDP_BIND:-}"
+MASQUE_TLS_CERT="${OCTOPUSCORE_MASQUE_TLS_CERT:-}"
+MASQUE_TLS_KEY="${OCTOPUSCORE_MASQUE_TLS_KEY:-}"
 SERVER_PUBLIC_KEY="${OCTOPUSCORE_SERVER_PUBLIC_KEY:-SUH0D3XJfvzk0nl7rtnUrE6mnf3lJdWaOA197yVGOUI=}"
 TLS_PIN="${OCTOPUSCORE_TLS_PIN:-BVX+RGCG1xMcqwiYuLmB+/Fw/80T+RDuqkXC0S/G6yo=}"
 ENABLE_NOW=true
@@ -38,7 +42,11 @@ Options:
   --public-udp-gateway URL
   --public-dcp-gateways CSV
   --public-dcp-https-gateways CSV
+  --public-masque-gateways CSV
   --dcp-https-upstream HOST:PORT
+  --masque-udp-bind ADDR:PORT
+  --masque-tls-cert PATH
+  --masque-tls-key PATH
   --server-public-key BASE64
   --tls-pin BASE64
   --enable-now        Start service after install (default)
@@ -58,7 +66,11 @@ while [ "$#" -gt 0 ]; do
     --public-udp-gateway) PUBLIC_UDP_GATEWAY="$2"; shift ;;
     --public-dcp-gateways) PUBLIC_DCP_GATEWAYS="$2"; shift ;;
     --public-dcp-https-gateways) PUBLIC_DCP_HTTPS_GATEWAYS="$2"; shift ;;
+    --public-masque-gateways) PUBLIC_MASQUE_GATEWAYS="$2"; shift ;;
     --dcp-https-upstream) DCP_HTTPS_UPSTREAM="$2"; shift ;;
+    --masque-udp-bind) MASQUE_UDP_BIND="$2"; shift ;;
+    --masque-tls-cert) MASQUE_TLS_CERT="$2"; shift ;;
+    --masque-tls-key) MASQUE_TLS_KEY="$2"; shift ;;
     --server-public-key) SERVER_PUBLIC_KEY="$2"; shift ;;
     --tls-pin) TLS_PIN="$2"; shift ;;
     --enable-now) ENABLE_NOW=true ;;
@@ -158,7 +170,11 @@ args=(
   --public-udp-gateway "$PUBLIC_UDP_GATEWAY"
   --public-dcp-gateways "$PUBLIC_DCP_GATEWAYS"
   --public-dcp-https-gateways "$PUBLIC_DCP_HTTPS_GATEWAYS"
+  --public-masque-gateways "$PUBLIC_MASQUE_GATEWAYS"
   --dcp-https-upstream "$DCP_HTTPS_UPSTREAM"
+  --masque-udp-bind "$MASQUE_UDP_BIND"
+  --masque-tls-cert "$MASQUE_TLS_CERT"
+  --masque-tls-key "$MASQUE_TLS_KEY"
   --server-public-key "$SERVER_PUBLIC_KEY"
   --tls-pin "$TLS_PIN"
 )
@@ -172,7 +188,11 @@ if [ "$DRY_RUN" = true ]; then
     --public-udp-gateway "$PUBLIC_UDP_GATEWAY"
     --public-dcp-gateways "$PUBLIC_DCP_GATEWAYS"
     --public-dcp-https-gateways "$PUBLIC_DCP_HTTPS_GATEWAYS"
+    --public-masque-gateways "$PUBLIC_MASQUE_GATEWAYS"
     --dcp-https-upstream "$DCP_HTTPS_UPSTREAM"
+    --masque-udp-bind "$MASQUE_UDP_BIND"
+    --masque-tls-cert "$MASQUE_TLS_CERT"
+    --masque-tls-key "$MASQUE_TLS_KEY"
     --server-public-key "$SERVER_PUBLIC_KEY"
     --tls-pin "$TLS_PIN"
   )
