@@ -10,8 +10,14 @@ PUBLIC_BASE_URL="${OCTOPUSCORE_PUBLIC_BASE_URL:-https://octopus.dedyn.io}"
 PUBLIC_UDP_GATEWAY="${OCTOPUSCORE_PUBLIC_UDP_GATEWAY:-udp://octopus.dedyn.io:443}"
 PUBLIC_DCP_GATEWAYS="${OCTOPUSCORE_PUBLIC_DCP_GATEWAYS:-}"
 PUBLIC_DCP_HTTPS_GATEWAYS="${OCTOPUSCORE_PUBLIC_DCP_HTTPS_GATEWAYS:-https://octopus.dedyn.io/v1/link/dcp-https}"
+PUBLIC_DCP_DOH_GATEWAYS="${OCTOPUSCORE_PUBLIC_DCP_DOH_GATEWAYS:-https://octopus.dedyn.io/dns-query}"
 PUBLIC_MASQUE_GATEWAYS="${OCTOPUSCORE_PUBLIC_MASQUE_GATEWAYS:-}"
+PUBLIC_DCP_DNS_ZONES="${OCTOPUSCORE_PUBLIC_DCP_DNS_ZONES:-ocl.octopus.dedyn.io}"
 DCP_HTTPS_UPSTREAM="${OCTOPUSCORE_DCP_HTTPS_UPSTREAM:-127.0.0.1:443}"
+DCP_DNS_UDP_BIND="${OCTOPUSCORE_DCP_DNS_UDP_BIND:-}"
+DCP_DNS_UPSTREAM="${OCTOPUSCORE_DCP_DNS_UPSTREAM:-127.0.0.1:443}"
+DCP_DNS_MAX_QUERY_BYTES="${OCTOPUSCORE_DCP_DNS_MAX_QUERY_BYTES:-1232}"
+DCP_DNS_MAX_RESPONSE_BYTES="${OCTOPUSCORE_DCP_DNS_MAX_RESPONSE_BYTES:-1232}"
 MASQUE_UDP_BIND="${OCTOPUSCORE_MASQUE_UDP_BIND:-}"
 MASQUE_TLS_CERT="${OCTOPUSCORE_MASQUE_TLS_CERT:-}"
 MASQUE_TLS_KEY="${OCTOPUSCORE_MASQUE_TLS_KEY:-}"
@@ -42,8 +48,14 @@ Options:
   --public-udp-gateway URL
   --public-dcp-gateways CSV
   --public-dcp-https-gateways CSV
+  --public-dcp-doh-gateways CSV
   --public-masque-gateways CSV
+  --public-dcp-dns-zones CSV
   --dcp-https-upstream HOST:PORT
+  --dcp-dns-udp-bind ADDR:PORT
+  --dcp-dns-upstream HOST:PORT
+  --dcp-dns-max-query-bytes BYTES
+  --dcp-dns-max-response-bytes BYTES
   --masque-udp-bind ADDR:PORT
   --masque-tls-cert PATH
   --masque-tls-key PATH
@@ -66,8 +78,14 @@ while [ "$#" -gt 0 ]; do
     --public-udp-gateway) PUBLIC_UDP_GATEWAY="$2"; shift ;;
     --public-dcp-gateways) PUBLIC_DCP_GATEWAYS="$2"; shift ;;
     --public-dcp-https-gateways) PUBLIC_DCP_HTTPS_GATEWAYS="$2"; shift ;;
+    --public-dcp-doh-gateways) PUBLIC_DCP_DOH_GATEWAYS="$2"; shift ;;
     --public-masque-gateways) PUBLIC_MASQUE_GATEWAYS="$2"; shift ;;
+    --public-dcp-dns-zones) PUBLIC_DCP_DNS_ZONES="$2"; shift ;;
     --dcp-https-upstream) DCP_HTTPS_UPSTREAM="$2"; shift ;;
+    --dcp-dns-udp-bind) DCP_DNS_UDP_BIND="$2"; shift ;;
+    --dcp-dns-upstream) DCP_DNS_UPSTREAM="$2"; shift ;;
+    --dcp-dns-max-query-bytes) DCP_DNS_MAX_QUERY_BYTES="$2"; shift ;;
+    --dcp-dns-max-response-bytes) DCP_DNS_MAX_RESPONSE_BYTES="$2"; shift ;;
     --masque-udp-bind) MASQUE_UDP_BIND="$2"; shift ;;
     --masque-tls-cert) MASQUE_TLS_CERT="$2"; shift ;;
     --masque-tls-key) MASQUE_TLS_KEY="$2"; shift ;;
@@ -170,8 +188,14 @@ args=(
   --public-udp-gateway "$PUBLIC_UDP_GATEWAY"
   --public-dcp-gateways "$PUBLIC_DCP_GATEWAYS"
   --public-dcp-https-gateways "$PUBLIC_DCP_HTTPS_GATEWAYS"
+  --public-dcp-doh-gateways "$PUBLIC_DCP_DOH_GATEWAYS"
   --public-masque-gateways "$PUBLIC_MASQUE_GATEWAYS"
+  --public-dcp-dns-zones "$PUBLIC_DCP_DNS_ZONES"
   --dcp-https-upstream "$DCP_HTTPS_UPSTREAM"
+  --dcp-dns-udp-bind "$DCP_DNS_UDP_BIND"
+  --dcp-dns-upstream "$DCP_DNS_UPSTREAM"
+  --dcp-dns-max-query-bytes "$DCP_DNS_MAX_QUERY_BYTES"
+  --dcp-dns-max-response-bytes "$DCP_DNS_MAX_RESPONSE_BYTES"
   --masque-udp-bind "$MASQUE_UDP_BIND"
   --masque-tls-cert "$MASQUE_TLS_CERT"
   --masque-tls-key "$MASQUE_TLS_KEY"
@@ -188,8 +212,14 @@ if [ "$DRY_RUN" = true ]; then
     --public-udp-gateway "$PUBLIC_UDP_GATEWAY"
     --public-dcp-gateways "$PUBLIC_DCP_GATEWAYS"
     --public-dcp-https-gateways "$PUBLIC_DCP_HTTPS_GATEWAYS"
+    --public-dcp-doh-gateways "$PUBLIC_DCP_DOH_GATEWAYS"
     --public-masque-gateways "$PUBLIC_MASQUE_GATEWAYS"
+    --public-dcp-dns-zones "$PUBLIC_DCP_DNS_ZONES"
     --dcp-https-upstream "$DCP_HTTPS_UPSTREAM"
+    --dcp-dns-udp-bind "$DCP_DNS_UDP_BIND"
+    --dcp-dns-upstream "$DCP_DNS_UPSTREAM"
+    --dcp-dns-max-query-bytes "$DCP_DNS_MAX_QUERY_BYTES"
+    --dcp-dns-max-response-bytes "$DCP_DNS_MAX_RESPONSE_BYTES"
     --masque-udp-bind "$MASQUE_UDP_BIND"
     --masque-tls-cert "$MASQUE_TLS_CERT"
     --masque-tls-key "$MASQUE_TLS_KEY"

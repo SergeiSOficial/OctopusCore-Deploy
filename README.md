@@ -19,8 +19,9 @@ curl -fsSL https://raw.githubusercontent.com/SergeiSOficial/OctopusCore-Deploy/m
   | sudo bash -s -- --version latest --bind 127.0.0.1:8088 --enable-now
 ```
 
-Stage 2 DCP HTTPS is advertised alongside the DCP UDP Gateway by default. The
-controller bridges `/v1/link/dcp-https` sessions to the local dataplane listener:
+DCP HTTPS and DCP DoH are advertised alongside the DCP UDP Gateway by default.
+The controller bridges `/v1/link/dcp-https` sessions to the local dataplane
+listener and serves DNS-message requests at `/dns-query`:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/SergeiSOficial/OctopusCore-Deploy/main/install-controller.sh \
@@ -28,7 +29,23 @@ curl -fsSL https://raw.githubusercontent.com/SergeiSOficial/OctopusCore-Deploy/m
       --version latest \
       --public-dcp-gateways udp://octopus.dedyn.io:443 \
       --public-dcp-https-gateways https://octopus.dedyn.io/v1/link/dcp-https \
+      --public-dcp-doh-gateways https://octopus.dedyn.io/dns-query \
       --dcp-https-upstream 127.0.0.1:443 \
+      --enable-now
+```
+
+DCP DNS UDP is optional and requires an operator-owned delegated zone. It is
+authoritative-only and best effort:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/SergeiSOficial/OctopusCore-Deploy/main/install-controller.sh \
+  | sudo bash -s -- \
+      --version latest \
+      --public-dcp-dns-zones ocl.octopus.dedyn.io \
+      --dcp-dns-udp-bind 0.0.0.0:53 \
+      --dcp-dns-upstream 127.0.0.1:443 \
+      --dcp-dns-max-query-bytes 1232 \
+      --dcp-dns-max-response-bytes 1232 \
       --enable-now
 ```
 
@@ -77,10 +94,10 @@ curl -fsSL https://raw.githubusercontent.com/SergeiSOficial/OctopusCore-Deploy/m
 
 OCI ingress must allow UDP/443 to the instance.
 
-The same host can expose Stage 2 DCP HTTPS through the controller/fronting path
-without opening another public port. Keep the local dataplane listener on
-`127.0.0.1:443` and advertise `https://<host>/v1/link/dcp-https` with the
-controller installer options above.
+The same host can expose DCP HTTPS and DCP DoH through the controller/fronting
+path without opening another public TCP port. Keep the local dataplane listener
+on `127.0.0.1:443` and advertise `https://<host>/v1/link/dcp-https` plus
+`https://<host>/dns-query` with the controller installer options above.
 
 ## Monitoring Server
 

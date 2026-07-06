@@ -194,7 +194,7 @@ EOF
     cat <<EOF
 $HOST {
 	@public_api {
-		path /healthz /v1/*
+		path /healthz /v1/* /dns-query
 	}
 
 	handle @public_api {
