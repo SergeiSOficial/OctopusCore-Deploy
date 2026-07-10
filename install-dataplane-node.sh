@@ -287,6 +287,31 @@ EOF
   chmod 0600 "$ENV_FILE"
 }
 
+sync_controller_public_key() {
+  local controller_env="/etc/octopuscore/octopuscore.env"
+  local node_public_key tmp
+  [ -f "$controller_env" ] || return 0
+  node_public_key="$(public_key)"
+  tmp="$(mktemp)"
+  awk -F= -v value="$node_public_key" '
+    BEGIN { updated = 0 }
+    $1 == "OCTOPUSCORE_SERVER_PUBLIC_KEY" {
+      print "OCTOPUSCORE_SERVER_PUBLIC_KEY=" value
+      updated = 1
+      next
+    }
+    { print }
+    END {
+      if (!updated) print "OCTOPUSCORE_SERVER_PUBLIC_KEY=" value
+    }
+  ' "$controller_env" > "$tmp"
+  install -m 0600 "$tmp" "$controller_env"
+  rm -f "$tmp"
+  if systemctl list-unit-files octopuscore.service >/dev/null 2>&1; then
+    systemctl restart octopuscore.service
+  fi
+}
+
 require_cmd curl
 require_cmd tar
 require_cmd sha256sum
@@ -343,6 +368,7 @@ fi
 
 write_transport_profile
 write_env
+sync_controller_public_key
 write_gateway_dns_resolved_dropin
 ensure_firewall_rules
 
