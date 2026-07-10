@@ -6,6 +6,9 @@ VERSION="${OCTOPUSCORE_VERSION:-latest}"
 INSTALL_DIR="${OCTOPUSCORE_INSTALLER_DIR:-/opt/octopuscore-deploy/controller}"
 BIND_ADDR="${OCTOPUSCORE_BIND:-127.0.0.1:8088}"
 CONTROL_GATEWAY="${OCTOPUSCORE_CONTROL_GATEWAY:-https://octopus.dedyn.io/v1}"
+ENVIRONMENT="${OCTOPUSCORE_ENVIRONMENT:-development}"
+ACCESS_POINTS_JSON="${OCTOPUSCORE_ACCESS_POINTS_JSON:-}"
+DIRECTORY_VERSION="${OCTOPUSCORE_DIRECTORY_VERSION:-1}"
 PUBLIC_BASE_URL="${OCTOPUSCORE_PUBLIC_BASE_URL:-https://octopus.dedyn.io}"
 PUBLIC_UDP_GATEWAY="${OCTOPUSCORE_PUBLIC_UDP_GATEWAY:-udp://octopus.dedyn.io:443}"
 PUBLIC_DCP_GATEWAYS="${OCTOPUSCORE_PUBLIC_DCP_GATEWAYS:-}"
@@ -44,6 +47,9 @@ Options:
   --install-dir PATH  Temporary installer workspace
   --bind ADDR:PORT    Controller bind address
   --control-gateway URL
+  --environment MODE
+  --access-points-json JSON
+  --directory-version NUMBER
   --public-base-url URL
   --public-udp-gateway URL
   --public-dcp-gateways CSV
@@ -74,6 +80,9 @@ while [ "$#" -gt 0 ]; do
     --install-dir) INSTALL_DIR="$2"; shift ;;
     --bind) BIND_ADDR="$2"; shift ;;
     --control-gateway) CONTROL_GATEWAY="$2"; shift ;;
+    --environment) ENVIRONMENT="$2"; shift ;;
+    --access-points-json) ACCESS_POINTS_JSON="$2"; shift ;;
+    --directory-version) DIRECTORY_VERSION="$2"; shift ;;
     --public-base-url) PUBLIC_BASE_URL="$2"; shift ;;
     --public-udp-gateway) PUBLIC_UDP_GATEWAY="$2"; shift ;;
     --public-dcp-gateways) PUBLIC_DCP_GATEWAYS="$2"; shift ;;
@@ -184,6 +193,9 @@ args=(
   --binary "$binary_path"
   --bind "$BIND_ADDR"
   --control-gateway "$CONTROL_GATEWAY"
+  --environment "$ENVIRONMENT"
+  --access-points-json "$ACCESS_POINTS_JSON"
+  --directory-version "$DIRECTORY_VERSION"
   --public-base-url "$PUBLIC_BASE_URL"
   --public-udp-gateway "$PUBLIC_UDP_GATEWAY"
   --public-dcp-gateways "$PUBLIC_DCP_GATEWAYS"
@@ -208,6 +220,9 @@ if [ "$DRY_RUN" = true ]; then
     --binary "$binary_path"
     --bind "$BIND_ADDR"
     --control-gateway "$CONTROL_GATEWAY"
+    --environment "$ENVIRONMENT"
+    --access-points-json "$ACCESS_POINTS_JSON"
+    --directory-version "$DIRECTORY_VERSION"
     --public-base-url "$PUBLIC_BASE_URL"
     --public-udp-gateway "$PUBLIC_UDP_GATEWAY"
     --public-dcp-gateways "$PUBLIC_DCP_GATEWAYS"
