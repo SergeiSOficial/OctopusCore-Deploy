@@ -472,9 +472,38 @@ fi
 install -m 0644 "$INSTALL_DIR/octopuscore-dataplane-node.service" /etc/systemd/system/octopuscore-dataplane-node.service
 systemctl daemon-reload
 
+socket_listens_on_port() {
+  local protocol="$1" port="$2"
+  case "$protocol" in
+    tcp) ss -H -ltn ;;
+    udp) ss -H -lun ;;
+    *) return 1 ;;
+  esac | awk -v port=":$port" '
+    {
+      for (i = 1; i <= NF; i++) {
+        if ($i ~ port "$") {
+          found = 1
+        }
+      }
+    }
+    END { exit found ? 0 : 1 }'
+}
+
 if [ "$ENABLE_NOW" = true ]; then
   systemctl enable --now octopuscore-dataplane-node.service
   systemctl restart octopuscore-dataplane-node.service
+  ready=false
+  for _ in $(seq 1 60); do
+    if socket_listens_on_port tcp "$SPEED_PROOF_PORT" && socket_listens_on_port udp "$SPEED_PROOF_PORT"; then
+      ready=true
+      break
+    fi
+    systemctl is-active --quiet octopuscore-dataplane-node.service ||
+      fail "dataplane service exited before Link speed listeners became ready"
+    sleep 0.5
+  done
+  [ "$ready" = true ] || fail "Link speed listeners are unavailable on port $SPEED_PROOF_PORT"
+  say "verified octopuscore-speed-proof listeners"
 else
   say "installed files; start with: systemctl enable --now octopuscore-dataplane-node.service"
 fi

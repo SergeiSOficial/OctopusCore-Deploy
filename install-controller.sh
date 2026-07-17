@@ -126,8 +126,25 @@ should_sync_colocated_dataplane() {
   esac
 }
 
+socket_listens_on_port() {
+  local protocol="$1" port="$2"
+  case "$protocol" in
+    tcp) ss -H -ltn ;;
+    udp) ss -H -lun ;;
+    *) return 1 ;;
+  esac | awk -v port=":$port" '
+    {
+      for (i = 1; i <= NF; i++) {
+        if ($i ~ port "$") {
+          found = 1
+        }
+      }
+    }
+    END { exit found ? 0 : 1 }'
+}
+
 verify_colocated_dataplane() {
-  local env_file speed_bin speed_port
+  local env_file speed_bin speed_port ready
   env_file="/etc/octopuscore/dataplane-node.env"
   speed_bin="/usr/local/lib/octopuscore/octopuscore-speed-proof"
   speed_port="51901"
@@ -140,26 +157,17 @@ verify_colocated_dataplane() {
   systemctl is-active --quiet octopuscore-dataplane-node.service ||
     fail "colocated dataplane service is not active"
   [ -x "$speed_bin" ] || fail "missing Link speed service executable $speed_bin"
-  ss -H -ltn | awk -v port=":$speed_port" '
-    {
-      for (i = 1; i <= NF; i++) {
-        if ($i ~ port "$") {
-          found = 1
-        }
-      }
-    }
-    END { exit found ? 0 : 1 }' ||
-    fail "Link speed TCP listener is unavailable on port $speed_port"
-  ss -H -lun | awk -v port=":$speed_port" '
-    {
-      for (i = 1; i <= NF; i++) {
-        if ($i ~ port "$") {
-          found = 1
-        }
-      }
-    }
-    END { exit found ? 0 : 1 }' ||
-    fail "Link speed UDP listener is unavailable on port $speed_port"
+  ready=false
+  for _ in $(seq 1 60); do
+    if socket_listens_on_port tcp "$speed_port" && socket_listens_on_port udp "$speed_port"; then
+      ready=true
+      break
+    fi
+    systemctl is-active --quiet octopuscore-dataplane-node.service ||
+      fail "colocated dataplane service exited before Link speed listeners became ready"
+    sleep 0.5
+  done
+  [ "$ready" = true ] || fail "Link speed listeners are unavailable on port $speed_port"
   say "verified colocated dataplane and octopuscore-speed-proof listeners"
 }
 
