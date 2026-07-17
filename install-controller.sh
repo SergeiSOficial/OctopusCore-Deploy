@@ -28,6 +28,7 @@ SERVER_PUBLIC_KEY="${OCTOPUSCORE_SERVER_PUBLIC_KEY:-}"
 TLS_PIN="${OCTOPUSCORE_TLS_PIN:-BVX+RGCG1xMcqwiYuLmB+/Fw/80T+RDuqkXC0S/G6yo=}"
 ENABLE_NOW=true
 DRY_RUN=false
+SYNC_DATAPLANE=auto
 
 fail() {
   printf 'install-controller: FAIL: %s\n' "$*" >&2
@@ -69,6 +70,8 @@ Options:
   --tls-pin BASE64
   --enable-now        Start service after install (default)
   --no-start          Install but do not start service
+  --sync-dataplane    Install the same release on the colocated dataplane
+  --no-sync-dataplane Do not update an installed colocated dataplane
   --dry-run           Print planned host changes
   -h, --help          Show help
 EOF
@@ -102,12 +105,47 @@ while [ "$#" -gt 0 ]; do
     --tls-pin) TLS_PIN="$2"; shift ;;
     --enable-now) ENABLE_NOW=true ;;
     --no-start) ENABLE_NOW=false ;;
+    --sync-dataplane) SYNC_DATAPLANE=true ;;
+    --no-sync-dataplane) SYNC_DATAPLANE=false ;;
     --dry-run) DRY_RUN=true ;;
     -h|--help) usage; exit 0 ;;
     *) fail "unknown option $1" ;;
   esac
   shift
 done
+
+should_sync_colocated_dataplane() {
+  case "$SYNC_DATAPLANE" in
+    true) return 0 ;;
+    false) return 1 ;;
+    auto)
+      [ -f /etc/systemd/system/octopuscore-dataplane-node.service ] ||
+        systemctl list-unit-files octopuscore-dataplane-node.service >/dev/null 2>&1
+      ;;
+    *) fail "invalid dataplane synchronization mode: $SYNC_DATAPLANE" ;;
+  esac
+}
+
+verify_colocated_dataplane() {
+  local env_file speed_bin speed_port
+  env_file="/etc/octopuscore/dataplane-node.env"
+  speed_bin="/usr/local/lib/octopuscore/octopuscore-speed-proof"
+  speed_port="51901"
+  if [ -f "$env_file" ]; then
+    speed_bin="$(awk -F= '$1 == "OCTOPUSCORE_SPEED_PROOF_BIN" { print substr($0, index($0, "=") + 1) }' "$env_file" | tail -n 1)"
+    speed_port="$(awk -F= '$1 == "OCTOPUSCORE_SPEED_PROOF_PORT" { print substr($0, index($0, "=") + 1) }' "$env_file" | tail -n 1)"
+    speed_bin="${speed_bin:-/usr/local/lib/octopuscore/octopuscore-speed-proof}"
+    speed_port="${speed_port:-51901}"
+  fi
+  systemctl is-active --quiet octopuscore-dataplane-node.service ||
+    fail "colocated dataplane service is not active"
+  [ -x "$speed_bin" ] || fail "missing Link speed service executable $speed_bin"
+  ss -H -ltn | awk -v port=":$speed_port" '$4 ~ port "$" { found = 1 } END { exit found ? 0 : 1 }' ||
+    fail "Link speed TCP listener is unavailable on port $speed_port"
+  ss -H -lun | awk -v port=":$speed_port" '$5 ~ port "$" { found = 1 } END { exit found ? 0 : 1 }' ||
+    fail "Link speed UDP listener is unavailable on port $speed_port"
+  say "verified colocated dataplane and octopuscore-speed-proof listeners"
+}
 
 existing_dataplane_public_key() {
   local env_file="/etc/octopuscore/dataplane-node.env"
@@ -260,3 +298,24 @@ elif [ "$ENABLE_NOW" = true ]; then
 fi
 
 "$extract_dir/scripts/install/install-main-controller-ubuntu.sh" "${args[@]}"
+
+if should_sync_colocated_dataplane; then
+  if [ "$DRY_RUN" = true ]; then
+    say "would synchronize installed colocated dataplane to release $VERSION"
+  else
+    dataplane_installer="$WORK/install-dataplane-node.sh"
+    curl -fsSL "https://raw.githubusercontent.com/${REPO}/main/install-dataplane-node.sh" \
+      -o "$dataplane_installer"
+    chmod +x "$dataplane_installer"
+    dataplane_args=(--version "$VERSION")
+    if [ "$ENABLE_NOW" = true ]; then
+      dataplane_args+=(--enable-now)
+    else
+      dataplane_args+=(--no-start)
+    fi
+    "$dataplane_installer" "${dataplane_args[@]}"
+    if [ "$ENABLE_NOW" = true ]; then
+      verify_colocated_dataplane
+    fi
+  fi
+fi

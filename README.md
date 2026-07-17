@@ -19,6 +19,12 @@ curl -fsSL https://raw.githubusercontent.com/SergeiSOficial/OctopusCore-Deploy/m
   | sudo bash -s -- --version latest --bind 127.0.0.1:8088 --enable-now
 ```
 
+When a controller host already has `octopuscore-dataplane-node.service`, the
+controller installer upgrades that colocated role to the same release and
+requires the internal Link speed service to become healthy. Use
+`--no-sync-dataplane` only when the roles intentionally follow separate release
+cadences.
+
 DCP HTTPS and DCP DoH are advertised alongside the DCP UDP Gateway by default.
 The controller bridges `/v1/link/dcp-https` sessions to the local dataplane
 listener and serves DNS-message requests at `/dns-query`:
