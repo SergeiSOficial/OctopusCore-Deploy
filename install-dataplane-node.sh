@@ -18,6 +18,9 @@ LISTEN_PORT="${OCTOPUSCORE_NODE_LISTEN_PORT:-443}"
 MTU="${OCTOPUSCORE_NODE_MTU:-1280}"
 EGRESS_INTERFACE="${OCTOPUSCORE_EGRESS_INTERFACE:-auto}"
 GATEWAY_DNS_RESOLVER="${OCTOPUSCORE_GATEWAY_DNS_RESOLVER:-169.254.169.254}"
+SPEED_PROOF_PORT="${OCTOPUSCORE_SPEED_PROOF_PORT:-51901}"
+SPEED_PROOF_BIN="${OCTOPUSCORE_SPEED_PROOF_BIN:-/usr/local/lib/octopuscore/octopuscore-speed-proof}"
+SPEED_PROOF_INSTALL_DIR="$(dirname "$SPEED_PROOF_BIN")"
 KEY_FILE="${OCTOPUSCORE_NODE_KEY_FILE:-/etc/octopuscore/dataplane-node.key}"
 TRANSPORT_PROFILE_FILE="${OCTOPUSCORE_TRANSPORT_PROFILE_FILE:-/etc/octopuscore/dataplane-transport.toml}"
 JOIN_TOKEN="${OCTOPUSCORE_NODE_JOIN_TOKEN:-}"
@@ -126,6 +129,14 @@ EOF
 
 checksum() {
   sha256sum "$1" | awk '{print $1}'
+}
+
+release_arch() {
+  case "$(uname -m)" in
+    x86_64|amd64) printf 'amd64\n' ;;
+    aarch64|arm64) printf 'arm64\n' ;;
+    *) fail "unsupported dataplane architecture: $(uname -m)" ;;
+  esac
 }
 
 latest_tag() {
@@ -251,6 +262,10 @@ ensure_firewall_rules() {
     || iptables -I INPUT 1 -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p udp --dport 53 -j ACCEPT
   iptables -C INPUT -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p tcp --dport 53 -j ACCEPT 2>/dev/null \
     || iptables -I INPUT 1 -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p tcp --dport 53 -j ACCEPT
+  iptables -C INPUT -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p tcp --dport "$SPEED_PROOF_PORT" -j ACCEPT 2>/dev/null \
+    || iptables -I INPUT 1 -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p tcp --dport "$SPEED_PROOF_PORT" -j ACCEPT
+  iptables -C INPUT -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p udp --dport "$SPEED_PROOF_PORT" -j ACCEPT 2>/dev/null \
+    || iptables -I INPUT 1 -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p udp --dport "$SPEED_PROOF_PORT" -j ACCEPT
 }
 
 write_transport_profile() {
@@ -281,6 +296,8 @@ OCTOPUSCORE_GATEWAY_DNS_RESOLVER=$GATEWAY_DNS_RESOLVER
 OCTOPUSCORE_NODE_KEY_FILE=$KEY_FILE
 OCTOPUSCORE_TRANSPORT_PROFILE_FILE=$TRANSPORT_PROFILE_FILE
 OCTOPUSCORE_GOTATUN_BIN=/usr/local/bin/gotatun
+OCTOPUSCORE_SPEED_PROOF_BIN=$SPEED_PROOF_BIN
+OCTOPUSCORE_SPEED_PROOF_PORT=$SPEED_PROOF_PORT
 OCTOPUSCORE_CONFIG_POLL_SECONDS=${OCTOPUSCORE_CONFIG_POLL_SECONDS:-5}
 OCTOPUSCORE_HEALTH_SECONDS=${OCTOPUSCORE_HEALTH_SECONDS:-15}
 EOF
@@ -331,15 +348,20 @@ trap 'rm -rf "$WORK"' EXIT
 say "release=$VERSION"
 say "bundle_asset=octopuscore-dataplane-node-ubuntu.tar.gz"
 say "binary_asset=gotatun-linux-amd64"
+SPEED_PROOF_ASSET="octopuscore-speed-proof-linux-$(release_arch)"
+say "speed-proof-binary-asset=$SPEED_PROOF_ASSET"
 
 download SHA256SUMS
 download gotatun-linux-amd64
+download "$SPEED_PROOF_ASSET"
 download octopuscore-dataplane-node-ubuntu.tar.gz
 verify_asset gotatun-linux-amd64
+verify_asset "$SPEED_PROOF_ASSET"
 verify_asset octopuscore-dataplane-node-ubuntu.tar.gz
 
 if [ "$DRY_RUN" = true ]; then
   say "would install gotatun to /usr/local/bin/gotatun"
+  say "would install Link speed service to $SPEED_PROOF_BIN"
   say "would install bundle to $INSTALL_DIR"
   say "would write env file $ENV_FILE"
   say "would start octopuscore-dataplane-node.service when --enable-now is active"
@@ -354,8 +376,10 @@ require_cmd python3
 require_cmd sha256sum
 
 install -d -m 0755 "$INSTALL_DIR"
+install -d -m 0755 "$SPEED_PROOF_INSTALL_DIR"
 tar -xzf "$WORK/octopuscore-dataplane-node-ubuntu.tar.gz" -C "$INSTALL_DIR" --strip-components=1
 install -m 0755 "$WORK/gotatun-linux-amd64" /usr/local/bin/gotatun
+install -m 0755 "$WORK/$SPEED_PROOF_ASSET" "$SPEED_PROOF_BIN"
 chmod +x "$INSTALL_DIR/run-dataplane-node.sh"
 
 ensure_key

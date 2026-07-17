@@ -99,6 +99,12 @@ path without opening another public TCP port. Keep the local dataplane listener
 on `127.0.0.1:443` and advertise `https://<host>/v1/link/dcp-https` plus
 `https://<host>/dns-query` with the controller installer options above.
 
+The dataplane installer also selects and installs the bounded CLE speed service
+for the host architecture. It listens only on the internal Link address at
+TCP/UDP `51901` and accepts per-lease authenticated measurements. Runtime
+authorization and aggregate status files remain under
+`/run/octopuscore-dataplane/` with mode `0600`.
+
 ## Monitoring Server
 
 Install files first:
@@ -124,6 +130,8 @@ Each release contains:
 - `ocpd-linux-amd64`
 - `ocpd-linux-arm64`
 - `gotatun-linux-amd64`
+- `octopuscore-speed-proof-linux-amd64`
+- `octopuscore-speed-proof-linux-arm64`
 - `octopuscore-controller-ubuntu.tar.gz`
 - `octopuscore-dataplane-node-ubuntu.tar.gz`
 - `octopuscore-node-agent-ubuntu.tar.gz`
