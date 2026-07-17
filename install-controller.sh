@@ -140,9 +140,25 @@ verify_colocated_dataplane() {
   systemctl is-active --quiet octopuscore-dataplane-node.service ||
     fail "colocated dataplane service is not active"
   [ -x "$speed_bin" ] || fail "missing Link speed service executable $speed_bin"
-  ss -H -ltn | awk -v port=":$speed_port" '$4 ~ port "$" { found = 1 } END { exit found ? 0 : 1 }' ||
+  ss -H -ltn | awk -v port=":$speed_port" '
+    {
+      for (i = 1; i <= NF; i++) {
+        if ($i ~ port "$") {
+          found = 1
+        }
+      }
+    }
+    END { exit found ? 0 : 1 }' ||
     fail "Link speed TCP listener is unavailable on port $speed_port"
-  ss -H -lun | awk -v port=":$speed_port" '$5 ~ port "$" { found = 1 } END { exit found ? 0 : 1 }' ||
+  ss -H -lun | awk -v port=":$speed_port" '
+    {
+      for (i = 1; i <= NF; i++) {
+        if ($i ~ port "$") {
+          found = 1
+        }
+      }
+    }
+    END { exit found ? 0 : 1 }' ||
     fail "Link speed UDP listener is unavailable on port $speed_port"
   say "verified colocated dataplane and octopuscore-speed-proof listeners"
 }
