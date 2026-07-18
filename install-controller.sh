@@ -126,49 +126,21 @@ should_sync_colocated_dataplane() {
   esac
 }
 
-socket_listens_on_port() {
-  local protocol="$1" port="$2"
-  case "$protocol" in
-    tcp) ss -H -ltn ;;
-    udp) ss -H -lun ;;
-    *) return 1 ;;
-  esac | awk -v port=":$port" '
-    {
-      for (i = 1; i <= NF; i++) {
-        if ($i ~ port "$") {
-          found = 1
-        }
-      }
-    }
-    END { exit found ? 0 : 1 }'
-}
-
 verify_colocated_dataplane() {
-  local env_file speed_bin speed_port ready
+  local env_file install_dir verifier registry
   env_file="/etc/octopuscore/dataplane-node.env"
-  speed_bin="/usr/local/lib/octopuscore/octopuscore-speed-proof"
-  speed_port="51901"
-  if [ -f "$env_file" ]; then
-    speed_bin="$(awk -F= '$1 == "OCTOPUSCORE_SPEED_PROOF_BIN" { print substr($0, index($0, "=") + 1) }' "$env_file" | tail -n 1)"
-    speed_port="$(awk -F= '$1 == "OCTOPUSCORE_SPEED_PROOF_PORT" { print substr($0, index($0, "=") + 1) }' "$env_file" | tail -n 1)"
-    speed_bin="${speed_bin:-/usr/local/lib/octopuscore/octopuscore-speed-proof}"
-    speed_port="${speed_port:-51901}"
-  fi
-  systemctl is-active --quiet octopuscore-dataplane-node.service ||
-    fail "colocated dataplane service is not active"
-  [ -x "$speed_bin" ] || fail "missing Link speed service executable $speed_bin"
-  ready=false
-  for _ in $(seq 1 60); do
-    if socket_listens_on_port tcp "$speed_port" && socket_listens_on_port udp "$speed_port"; then
-      ready=true
-      break
-    fi
-    systemctl is-active --quiet octopuscore-dataplane-node.service ||
-      fail "colocated dataplane service exited before Link speed listeners became ready"
-    sleep 0.5
-  done
-  [ "$ready" = true ] || fail "Link speed listeners are unavailable on port $speed_port"
-  say "verified colocated dataplane and octopuscore-speed-proof listeners"
+  install_dir="/opt/octopuscore-deploy/dataplane-node"
+  verifier="$install_dir/verify-dataplane-services.sh"
+  registry="$install_dir/service-registry.json"
+  [ -x "$verifier" ] || fail "missing colocated dataplane verifier $verifier"
+  [ -r "$registry" ] || fail "missing colocated dataplane service registry $registry"
+  "$verifier" \
+    --install-dir "$install_dir" \
+    --env-file "$env_file" \
+    --registry "$registry" \
+    --service-state required \
+    --wait-seconds 30
+  say "verified colocated dataplane through verify-dataplane-services.sh"
 }
 
 existing_dataplane_public_key() {

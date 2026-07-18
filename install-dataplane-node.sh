@@ -27,6 +27,7 @@ LISTEN_PORT="${OCTOPUSCORE_NODE_LISTEN_PORT:-}"
 MTU="${OCTOPUSCORE_NODE_MTU:-}"
 EGRESS_INTERFACE="${OCTOPUSCORE_EGRESS_INTERFACE:-}"
 GATEWAY_DNS_RESOLVER="${OCTOPUSCORE_GATEWAY_DNS_RESOLVER:-}"
+LINK_PROOF_PORT="${OCTOPUSCORE_LINK_PROOF_PORT:-}"
 SPEED_PROOF_PORT="${OCTOPUSCORE_SPEED_PROOF_PORT:-}"
 SPEED_PROOF_BIN="${OCTOPUSCORE_SPEED_PROOF_BIN:-}"
 KEY_FILE="${OCTOPUSCORE_NODE_KEY_FILE:-}"
@@ -74,6 +75,7 @@ load_existing_dataplane_config() {
   MTU="${MTU:-$(existing_value "OCTOPUSCORE_NODE_MTU")}"
   EGRESS_INTERFACE="${EGRESS_INTERFACE:-$(existing_value "OCTOPUSCORE_EGRESS_INTERFACE")}"
   GATEWAY_DNS_RESOLVER="${GATEWAY_DNS_RESOLVER:-$(existing_value "OCTOPUSCORE_GATEWAY_DNS_RESOLVER")}"
+  LINK_PROOF_PORT="${LINK_PROOF_PORT:-$(existing_value "OCTOPUSCORE_LINK_PROOF_PORT")}"
   KEY_FILE="${KEY_FILE:-$(existing_value "OCTOPUSCORE_NODE_KEY_FILE")}"
   TRANSPORT_PROFILE_FILE="${TRANSPORT_PROFILE_FILE:-$(existing_value "OCTOPUSCORE_TRANSPORT_PROFILE_FILE")}"
   SPEED_PROOF_BIN="${SPEED_PROOF_BIN:-$(existing_value "OCTOPUSCORE_SPEED_PROOF_BIN")}"
@@ -97,6 +99,7 @@ LISTEN_PORT="${LISTEN_PORT:-443}"
 MTU="${MTU:-1280}"
 EGRESS_INTERFACE="${EGRESS_INTERFACE:-auto}"
 GATEWAY_DNS_RESOLVER="${GATEWAY_DNS_RESOLVER:-169.254.169.254}"
+LINK_PROOF_PORT="${LINK_PROOF_PORT:-51900}"
 SPEED_PROOF_PORT="${SPEED_PROOF_PORT:-51901}"
 SPEED_PROOF_BIN="${SPEED_PROOF_BIN:-/usr/local/lib/octopuscore/octopuscore-speed-proof}"
 KEY_FILE="${KEY_FILE:-/etc/octopuscore/dataplane-node.key}"
@@ -150,6 +153,9 @@ while [ "$#" -gt 0 ]; do
 done
 
 SPEED_PROOF_INSTALL_DIR="$(dirname "$SPEED_PROOF_BIN")"
+SERVICE_REGISTRY="$INSTALL_DIR/service-registry.json"
+SERVICE_REGISTRY_HELPER="$INSTALL_DIR/service-registry.py"
+SERVICE_VERIFIER="$INSTALL_DIR/verify-dataplane-services.sh"
 
 require_cmd() {
   command -v "$1" >/dev/null 2>&1 || fail "missing required command: $1"
@@ -327,14 +333,11 @@ ensure_firewall_rules() {
   iptables -t nat -C POSTROUTING -s "$CLIENT_POOL" -o "$egress_if" -j MASQUERADE 2>/dev/null \
     || iptables -t nat -A POSTROUTING -s "$CLIENT_POOL" -o "$egress_if" -j MASQUERADE
   delete_dns_dnat_rules
-  iptables -C INPUT -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p udp --dport 53 -j ACCEPT 2>/dev/null \
-    || iptables -I INPUT 1 -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p udp --dport 53 -j ACCEPT
-  iptables -C INPUT -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p tcp --dport 53 -j ACCEPT 2>/dev/null \
-    || iptables -I INPUT 1 -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p tcp --dport 53 -j ACCEPT
-  iptables -C INPUT -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p tcp --dport "$SPEED_PROOF_PORT" -j ACCEPT 2>/dev/null \
-    || iptables -I INPUT 1 -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p tcp --dport "$SPEED_PROOF_PORT" -j ACCEPT
-  iptables -C INPUT -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p udp --dport "$SPEED_PROOF_PORT" -j ACCEPT 2>/dev/null \
-    || iptables -I INPUT 1 -i "$NODE_INTERFACE" -s "$CLIENT_POOL" -p udp --dport "$SPEED_PROOF_PORT" -j ACCEPT
+  python3 "$SERVICE_REGISTRY_HELPER" "$SERVICE_REGISTRY" apply-firewall \
+    --interface "$NODE_INTERFACE" \
+    --client-pool "$CLIENT_POOL" \
+    --set "OCTOPUSCORE_LINK_PROOF_PORT=$LINK_PROOF_PORT" \
+    --set "OCTOPUSCORE_SPEED_PROOF_PORT=$SPEED_PROOF_PORT"
 }
 
 write_transport_profile() {
@@ -362,6 +365,7 @@ OCTOPUSCORE_NODE_LISTEN_PORT=$LISTEN_PORT
 OCTOPUSCORE_NODE_MTU=$MTU
 OCTOPUSCORE_EGRESS_INTERFACE=$EGRESS_INTERFACE
 OCTOPUSCORE_GATEWAY_DNS_RESOLVER=$GATEWAY_DNS_RESOLVER
+OCTOPUSCORE_LINK_PROOF_PORT=$LINK_PROOF_PORT
 OCTOPUSCORE_NODE_KEY_FILE=$KEY_FILE
 OCTOPUSCORE_TRANSPORT_PROFILE_FILE=$TRANSPORT_PROFILE_FILE
 OCTOPUSCORE_GOTATUN_BIN=/usr/local/bin/gotatun
@@ -450,6 +454,7 @@ tar -xzf "$WORK/octopuscore-dataplane-node-ubuntu.tar.gz" -C "$INSTALL_DIR" --st
 install -m 0755 "$WORK/gotatun-linux-amd64" /usr/local/bin/gotatun
 install -m 0755 "$WORK/$SPEED_PROOF_ASSET" "$SPEED_PROOF_BIN"
 chmod +x "$INSTALL_DIR/run-dataplane-node.sh"
+chmod +x "$SERVICE_REGISTRY_HELPER" "$SERVICE_VERIFIER"
 
 ensure_key
 if [ -z "$JOIN_TOKEN" ]; then
@@ -472,38 +477,15 @@ fi
 install -m 0644 "$INSTALL_DIR/octopuscore-dataplane-node.service" /etc/systemd/system/octopuscore-dataplane-node.service
 systemctl daemon-reload
 
-socket_listens_on_port() {
-  local protocol="$1" port="$2"
-  case "$protocol" in
-    tcp) ss -H -ltn ;;
-    udp) ss -H -lun ;;
-    *) return 1 ;;
-  esac | awk -v port=":$port" '
-    {
-      for (i = 1; i <= NF; i++) {
-        if ($i ~ port "$") {
-          found = 1
-        }
-      }
-    }
-    END { exit found ? 0 : 1 }'
-}
-
 if [ "$ENABLE_NOW" = true ]; then
   systemctl enable --now octopuscore-dataplane-node.service
   systemctl restart octopuscore-dataplane-node.service
-  ready=false
-  for _ in $(seq 1 60); do
-    if socket_listens_on_port tcp "$SPEED_PROOF_PORT" && socket_listens_on_port udp "$SPEED_PROOF_PORT"; then
-      ready=true
-      break
-    fi
-    systemctl is-active --quiet octopuscore-dataplane-node.service ||
-      fail "dataplane service exited before Link speed listeners became ready"
-    sleep 0.5
-  done
-  [ "$ready" = true ] || fail "Link speed listeners are unavailable on port $SPEED_PROOF_PORT"
-  say "verified octopuscore-speed-proof listeners"
+  "$SERVICE_VERIFIER" \
+    --install-dir "$INSTALL_DIR" \
+    --env-file "$ENV_FILE" \
+    --service-state required \
+    --wait-seconds 30
+  say "verified dataplane service-registry.json listeners and firewall rules"
 else
   say "installed files; start with: systemctl enable --now octopuscore-dataplane-node.service"
 fi

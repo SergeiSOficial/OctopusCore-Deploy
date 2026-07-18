@@ -146,3 +146,7 @@ Each release contains:
 - `release-manifest.json`
 
 Installers verify SHA256 before applying host changes.
+
+The dataplane bundle includes `service-registry.json`, `service-registry.py`,
+and `verify-dataplane-services.sh`. Installation is complete only when every
+required registry listener and its bounded client-pool firewall rule verify.
