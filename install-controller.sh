@@ -24,6 +24,9 @@ DCP_DNS_MAX_RESPONSE_BYTES="${OCTOPUSCORE_DCP_DNS_MAX_RESPONSE_BYTES:-1232}"
 MASQUE_UDP_BIND="${OCTOPUSCORE_MASQUE_UDP_BIND:-}"
 MASQUE_TLS_CERT="${OCTOPUSCORE_MASQUE_TLS_CERT:-}"
 MASQUE_TLS_KEY="${OCTOPUSCORE_MASQUE_TLS_KEY:-}"
+GATEWAY_EDGE_TCP_BIND="${OCTOPUSCORE_GATEWAY_EDGE_TCP_BIND:-}"
+GATEWAY_EDGE_TLS_CERT="${OCTOPUSCORE_GATEWAY_EDGE_TLS_CERT:-}"
+GATEWAY_EDGE_TLS_KEY="${OCTOPUSCORE_GATEWAY_EDGE_TLS_KEY:-}"
 SERVER_PUBLIC_KEY="${OCTOPUSCORE_SERVER_PUBLIC_KEY:-}"
 TLS_PIN="${OCTOPUSCORE_TLS_PIN:-BVX+RGCG1xMcqwiYuLmB+/Fw/80T+RDuqkXC0S/G6yo=}"
 ENABLE_NOW=true
@@ -66,6 +69,9 @@ Options:
   --masque-udp-bind ADDR:PORT
   --masque-tls-cert PATH
   --masque-tls-key PATH
+  --gateway-edge-tcp-bind ADDR:PORT
+  --gateway-edge-tls-cert PATH
+  --gateway-edge-tls-key PATH
   --server-public-key BASE64
   --tls-pin BASE64
   --enable-now        Start service after install (default)
@@ -101,6 +107,9 @@ while [ "$#" -gt 0 ]; do
     --masque-udp-bind) MASQUE_UDP_BIND="$2"; shift ;;
     --masque-tls-cert) MASQUE_TLS_CERT="$2"; shift ;;
     --masque-tls-key) MASQUE_TLS_KEY="$2"; shift ;;
+    --gateway-edge-tcp-bind) GATEWAY_EDGE_TCP_BIND="$2"; shift ;;
+    --gateway-edge-tls-cert) GATEWAY_EDGE_TLS_CERT="$2"; shift ;;
+    --gateway-edge-tls-key) GATEWAY_EDGE_TLS_KEY="$2"; shift ;;
     --server-public-key) SERVER_PUBLIC_KEY="$2"; shift ;;
     --tls-pin) TLS_PIN="$2"; shift ;;
     --enable-now) ENABLE_NOW=true ;;
@@ -259,6 +268,9 @@ args=(
   --masque-udp-bind "$MASQUE_UDP_BIND"
   --masque-tls-cert "$MASQUE_TLS_CERT"
   --masque-tls-key "$MASQUE_TLS_KEY"
+  --gateway-edge-tcp-bind "$GATEWAY_EDGE_TCP_BIND"
+  --gateway-edge-tls-cert "$GATEWAY_EDGE_TLS_CERT"
+  --gateway-edge-tls-key "$GATEWAY_EDGE_TLS_KEY"
   --server-public-key "$SERVER_PUBLIC_KEY"
   --tls-pin "$TLS_PIN"
 )
@@ -286,6 +298,9 @@ if [ "$DRY_RUN" = true ]; then
     --masque-udp-bind "$MASQUE_UDP_BIND"
     --masque-tls-cert "$MASQUE_TLS_CERT"
     --masque-tls-key "$MASQUE_TLS_KEY"
+    --gateway-edge-tcp-bind "$GATEWAY_EDGE_TCP_BIND"
+    --gateway-edge-tls-cert "$GATEWAY_EDGE_TLS_CERT"
+    --gateway-edge-tls-key "$GATEWAY_EDGE_TLS_KEY"
     --server-public-key "$SERVER_PUBLIC_KEY"
     --tls-pin "$TLS_PIN"
   )
