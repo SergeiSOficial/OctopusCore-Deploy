@@ -193,6 +193,11 @@ EOF
     fi
     cat <<EOF
 $HOST {
+	handle_path /client-updates/* {
+		root * /var/lib/octopuscore/client-updates
+		file_server
+	}
+
 	@public_api {
 		path /healthz /v1/* /v3/* /dns-query
 	}
