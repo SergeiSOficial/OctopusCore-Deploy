@@ -4,6 +4,7 @@ set -euo pipefail
 HOST="${OCTOPUSCORE_PUBLIC_HOST:-octopus.dedyn.io}"
 UPSTREAM="${OCTOPUSCORE_FRONTING_UPSTREAM:-127.0.0.1:8088}"
 CADDYFILE="${OCTOPUSCORE_CADDYFILE:-/etc/caddy/Caddyfile}"
+CLIENT_UPDATES_DIR="${OCTOPUSCORE_CLIENT_UPDATES_DIR:-/var/www/octopuscore/client-updates}"
 ACME_EMAIL="${ACME_EMAIL:-}"
 DESEC_DOMAIN="${OCTOPUSCORE_DESEC_DOMAIN:-}"
 DESEC_TOKEN="${OCTOPUSCORE_DESEC_TOKEN:-${DESEC_TOKEN:-}}"
@@ -172,11 +173,12 @@ update_desec_dns() {
 
 write_caddyfile() {
   if [ "$DRY_RUN" = true ]; then
-    say "would write $CADDYFILE for host=$HOST upstream=$UPSTREAM"
+    say "would write $CADDYFILE for host=$HOST upstream=$UPSTREAM client_updates=$CLIENT_UPDATES_DIR"
     return 0
   fi
 
   install -d -m 0755 "$(dirname "$CADDYFILE")"
+  install -d -m 0755 "$CLIENT_UPDATES_DIR"
   tmp="$(mktemp)"
   {
     if [ -n "$ACME_EMAIL" ]; then
@@ -194,7 +196,7 @@ EOF
     cat <<EOF
 $HOST {
 	handle_path /client-updates/* {
-		root * /var/lib/octopuscore/client-updates
+		root * $CLIENT_UPDATES_DIR
 		file_server
 	}
 
