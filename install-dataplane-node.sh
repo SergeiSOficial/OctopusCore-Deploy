@@ -342,7 +342,7 @@ ensure_firewall_rules() {
 
 write_transport_profile() {
   install -d -m 0750 "$(dirname "$TRANSPORT_PROFILE_FILE")"
-  install -m 0644 "$INSTALL_DIR/transport-dcp-v3.toml" "$TRANSPORT_PROFILE_FILE"
+  install -m 0644 "$INSTALL_DIR/transport-dcp-v4.toml" "$TRANSPORT_PROFILE_FILE"
 }
 
 write_env() {
